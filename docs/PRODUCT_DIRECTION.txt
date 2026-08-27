@@ -1,0 +1,107 @@
+Photopol — Product Direction
+Updated: 2026-08-24
+
+================================================================================
+PHILOSOPHY (LOCKED)
+================================================================================
+
+Users tell Photopol WHAT RESULT they want. AI hides the complexity.
+
+NOT: Photoshop with 50 buttons (layers, masks, brushes, tool names)
+NOT: A website of separate AI tools (Remove BG, Upscale, Crop…)
+NOT: Upload → tool → download → re-upload → another tool
+
+YES: Upload → AI understands → simple outcome choices → AI does the work → Done
+
+User mental model:
+  “I want to edit my image.”
+  → Edit Image → upload → AI recommends / user picks a result
+  → Photopol runs the hard part automatically → professional result
+
+Internal jobs (remove_bg, enhance, upscale, crop…) are IMPLEMENTATION DETAIL.
+They must not appear as products or primary UI labels.
+
+================================================================================
+PRIMARY PRODUCTS (HUB) — sell RESULTS
+================================================================================
+
+1. Edit Image — one AI image workspace
+   Upload → analyze → outcome cards (e.g. “Online store ready”,
+   “Look professional”, “Instagram ad”, “Describe what you want”)
+   → one Run → before/after → export.
+   Advanced / fine-tune (manual capabilities) is optional and hidden —
+   never the default path.
+
+2. Create with AI
+   Describe what you want. AI decides image / multi-image / design path.
+   (Hub stub → full later)
+
+3. Create Video
+   Describe + duration + platform + style. AI handles production.
+   (Hub stub → full later)
+
+4. AI Captions
+   Upload video → speech → beautiful captions. User picks language/style only.
+   (Hub stub → full later)
+
+“AI Auto Edit” is folded INTO Edit Image (same experience), not a separate tool mall.
+
+Edit Image UI (Intelligence workspace):
+  Sidebar products · before/after slider · NL + outcome chips ·
+  “Your image is ready” checklist · on-demand variations · Download CTAs.
+  Manual fine-tune is hidden behind More Options.
+
+================================================================================
+OUTCOME EXAMPLES (Edit Image)
+================================================================================
+
+“Make this ready for my online store.”
+  → clean backdrop, quality, lighting, centering, soft shadow, shop sizes
+
+“Make this look professional.”
+  → AI decides what to fix (color, sharpness, framing…)
+
+“Make this an Instagram advertisement.”
+  → composition, size, backdrop, polish for IG
+
+Custom: user types the result in plain language → AI maps to a recipe.
+
+Show humans WHAT will improve (Clean backdrop · Sharper · Square for feed) —
+never model or tool SKUs.
+
+================================================================================
+CREDIT UX
+================================================================================
+
+Outcome recipes: one price before run (“Online store ready · N credits”).
+Ledger still records real jobs underneath.
+Session strip: “This image · session credits used: N”
+Users buy Photopol credits — never buy a tool.
+
+================================================================================
+SEO
+================================================================================
+
+Keep SEO pages for traffic. ALL CTAs → Edit Image (same workspace).
+Optional ?outcome=store_ready to preselect a result card — not a tool SKU.
+
+================================================================================
+BUILD STATUS
+================================================================================
+
+D1  Docs + stop tool sprawl                         DONE
+D2  Intent-first Edit Image (Intelligence UI mockup) DONE
+D3  Outcome recipes + on-demand variations          DONE
+D4  Create with AI                                  HUB STUB
+D5  Create Video                                    HUB STUB
+D6  AI Captions                                     HUB STUB
+
+================================================================================
+REJECTED
+================================================================================
+
+Tool-catalog product framing
+Exposing tool names as primary UX
+Photoshop-style control panels as the default
+Self-hosted GPU until economics demand it
+Teams/SSO / public API before Edit Image intent UX is solid

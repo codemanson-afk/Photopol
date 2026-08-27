@@ -1,0 +1,52 @@
+Photopol — Milestone Acceptance (fees)
+
+================================================================================
+PHASE 1 — $500 — Core SaaS + first AI workflow
+================================================================================
+
+[x] Auth (register / login / JWT / roles)
+[x] Projects + upload + ownership
+[x] Background removal AI path
+[x] Resize / crop / versions
+[x] Credits ledger
+[x] Admin
+[x] Stripe credit-pack foundation
+[x] Landing + SEO + Docker
+
+[ ] Live Replicate E2E (needs token)
+[ ] Live Stripe pack E2E (needs keys)
+[ ] photopol.us DNS/TLS deploy
+
+================================================================================
+PHASE 2 — +$350 — More AI tools, queues, production billing
+================================================================================
+
+[x] Object remove + upscale + enhance + bg replace
+[x] Jobs API + Arq worker + credit holds
+[x] Tool registry + plan entitlements
+[x] Stripe subscriptions + Customer Portal (code)
+[x] Visual tool cards / SEO pages
+
+[ ] Live Stripe subscription E2E
+[ ] Batch (moved to Phase 3)
+[ ] Admin cost analytics (Phase 3)
+[ ] Prod flags: queue + signed URLs + guest caps (Phase 3)
+
+================================================================================
+PHASE 3 — +$300 — Product + social workspace
+================================================================================
+
+[x] Batch processing + ZIP
+[x] Social + marketplace export packs
+[x] Product pipeline (cutout → studio BG → enhance → sizes)
+[x] Live export encode (PNG/JPG/WebP)
+[x] Wired editor controls (enhance sliders, crop transform, brush size, fit)
+[x] Upscale provider failover (fal + local)
+[x] Admin credits-vs-jobs strip
+[x] Prod profile documented (.env.example)
+
+Total if all three closed: $1,150
+
+================================================================================
+END
+================================================================================

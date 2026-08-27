@@ -1,0 +1,2 @@
+# Keep alembic migration aligned with portable Uuid/JSON string enums.
+# Production still uses PostgreSQL; Alembic 001 uses PG UUID/JSONB which is fine for Postgres.

@@ -1,0 +1,78 @@
+Photopol — Run servers (local)
+
+================================================================================
+QUICK START (what we use day-to-day)
+================================================================================
+
+Terminal 1 — Backend (port 8001)
+--------------------------------
+cd backend
+.venv\Scripts\activate
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
+
+API:  http://127.0.0.1:8001
+Docs: http://127.0.0.1:8001/docs
+
+
+Terminal 2 — Frontend (port 3000)
+---------------------------------
+cd frontend
+npm run dev
+
+App: http://localhost:3000
+
+
+Note: frontend/.env.local should point at the backend:
+  BACKEND_URL=http://127.0.0.1:8001
+  NEXT_PUBLIC_API_URL=http://127.0.0.1:8001/api
+
+================================================================================
+OPTIONAL — Infra (if not using local/SQLite-only setup)
+================================================================================
+
+From repo root:
+
+  docker compose up -d postgres redis minio
+
+================================================================================
+OPTIONAL — Full Docker stack
+================================================================================
+
+From repo root:
+
+  docker compose up --build
+
+  Frontend  http://localhost:3000
+  API       http://localhost:8000/docs
+  MinIO     http://localhost:9001
+
+Worker (when JOB_EXECUTION_MODE=queue):
+
+  docker compose up worker
+
+Or locally:
+
+  cd backend
+  .venv\Scripts\activate
+  arq app.worker.WorkerSettings
+
+================================================================================
+OPTIONAL — First-time backend setup
+================================================================================
+
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+alembic upgrade head
+
+Create admin:
+
+  docker compose exec backend python -m scripts.create_admin admin@photopol.us "YourSecurePass!" "Admin"
+
+  # or locally from backend/:
+  python -m scripts.create_admin admin@photopol.us "YourSecurePass!" "Admin"
+
+================================================================================
+END
+================================================================================

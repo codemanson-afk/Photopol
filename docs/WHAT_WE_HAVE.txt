@@ -1,0 +1,228 @@
+Photopol — What We Have So Far
+Updated: 2026-08-23
+Product: Photopol (photopol.us) — AI image editing SaaS
+Domain target: photopol.us
+
+================================================================================
+1. STACK
+================================================================================
+
+Frontend:  Next.js 15, TypeScript, Tailwind CSS
+Backend:   FastAPI, SQLAlchemy, Alembic, Pydantic
+Database:  PostgreSQL
+Cache:     Redis (used for Arq job queue when JOB_EXECUTION_MODE=queue)
+Storage:   S3-compatible (MinIO locally)
+AI:        Replicate + local rembg + remove.bg (configurable)
+Payments:  Stripe + Paddle (env on/off; packs + subscriptions + portals)
+Deploy:    Docker Compose (postgres, redis, minio, backend, worker, frontend)
+
+================================================================================
+2. PHASE STATUS
+================================================================================
+
+Phase 1 — DONE (MVP)
+  Auth, projects, upload, bg remove, resize, crop, versions, credits,
+  admin, Stripe credit-pack foundation, landing + SEO, Docker, docs.
+
+Phase 2 — IMPLEMENTED IN CODE
+  Jobs API, Arq worker, tool registry, object remove, upscale, enhance,
+  bg replace, credit holds, plan entitlements, Stripe plans + portal,
+  visual landing tool cards, SEO pages for new tools.
+
+Phase 3 — IMPLEMENTED IN CODE
+  Batch API + /batch UI + ZIP
+  Social + marketplace export packs
+  Product pipeline + /product-photo-editor
+  Live export encode, enhance sliders, brush size, bg shadow/position, resize fit
+  fal.ai upscale failover hook, admin avg credits/job
+  Prod profile notes in .env.example
+  Stripe + Paddle dual billing (STRIPE_ENABLED / PADDLE_ENABLED)
+  Admin Ops console (users/jobs/projects/credits/billing/audit)
+
+  Not done yet (ops / polish):
+  - Live Replicate E2E (needs REPLICATE_API_TOKEN)
+  - Live Stripe E2E (needs Stripe keys + price IDs)
+  - photopol.us DNS/TLS + production deploy
+  - Flip prod flags: JOB_EXECUTION_MODE=queue, USE_SIGNED_URLS=true,
+    GUEST_LIMITS_ENABLED=true
+
+Product direction pivot (2026-08):
+  Result-first hub — Edit Image | AI Auto Edit | Create / Video / Captions (later)
+  Not a multi-tool catalog. See docs/PRODUCT_DIRECTION.txt + GAP_AND_ROADMAP.txt
+
+Explicitly deferred:
+  Teams/SSO, public developer API, self-hosted diffusion
+  Create with AI / Video / Captions full pipelines (hub stubs only)
+
+================================================================================
+3. LIVE CAPABILITIES (inside Edit Image)
+================================================================================
+
+Tool ID          Label                 Credits (default)   Plan gate
+---------------  --------------------  ------------------  ---------
+remove_bg        Remove Background     5 (tiers 2/5/8)     free (Pro for bg-pro)
+object_remove    Object Remove         8 (best 20)         free (Pro for best)
+upscale          Upscale               6 (2x) / 14 (4x)    free / Pro for 4x
+enhance          Enhance               4                   free
+bg_replace       Background Replace    12                  Pro
+resize           Resize                1                   free
+crop             Crop                  1                   free
+
+Editor: Capability groups (Background · Cleanup · Quality · Frame), session
+        credit strip, brush erase, before/after, Done → export packs.
+
+================================================================================
+4. PRODUCT SURFACES (FRONTEND ROUTES)
+================================================================================
+
+Marketing / SEO
+  /                         Landing (hub: Edit / Auto / capabilities)
+  /ai-background-remover    → CTA Edit Image ?capability=background
+  /background-remover
+  /image-resizer            → ?capability=frame
+  /object-remover           → ?capability=cleanup
+  /image-upscaler           → ?capability=quality
+  /product-photo-editor
+
+App
+  /workspace                Edit Image (capability groups + session credits)
+  /auto-edit                AI Auto Edit analyze → recipe → run
+  /create                   Create with AI (stub)
+  /create-video             Create Video (stub)
+  /captions                 AI Captions (stub)
+  /home                     Result-first hub
+  /tools                    Capabilities entry (not tool mall)
+  /history
+  /credits
+  /billing
+  /settings
+  /login  /register
+  /admin                    Ops console
+  /batch                    Batch (power users)
+
+================================================================================
+5. BACKEND CAPABILITIES
+================================================================================
+
+Auth
+  Register / login / logout, JWT Bearer, USER + ADMIN roles
+  Guest sessions with optional caps (GUEST_LIMITS_ENABLED)
+
+Projects & media
+  Create projects, upload images (JPEG/PNG/WEBP), ownership checks
+  Immutable originals + ImageVersion history
+  Replace-in-place upload path for workspace
+
+Jobs (Phase 2)
+  POST /api/jobs          Create + enqueue (or inline in dev)
+  GET  /api/jobs/{id}     Poll status / progress / result
+  Credit hold on enqueue → deduct on success → release on fail
+  Idempotency keys
+  Worker: arq app.worker.WorkerSettings (Compose service: worker)
+
+Billing
+  Stripe + Paddle (STRIPE_ENABLED / PADDLE_ENABLED)
+  Credit packs (Checkout mode=payment)
+  Subscriptions Pro / Business (mode=subscription)
+  Customer portals (provider-aware)
+  Stripe webhooks: /api/billing/webhook[+ /stripe]
+  Paddle webhooks: /api/billing/webhook/paddle
+  Plans: free / pro / business (monthly credit allowances)
+
+Credits
+  Ledger with idempotent transactions
+  reserved_credits on users
+  Configurable costs via env
+
+Admin
+  Ops console: Overview, Users (patch plan/role/active), Jobs, Projects,
+  Credits ledger, Billing snapshot (read-only), Audit log
+  API under /api/admin/* · admin_audit_logs
+
+AI providers
+  Background: local rembg | remove.bg | Replicate (AI_BG_PROVIDER)
+  Object remove / upscale / enhance: Replicate with local fallbacks
+  Tool registry: backend/app/services/tool_registry.py
+
+================================================================================
+6. PLANS (AS CODED)
+================================================================================
+
+Free
+  Signup credits (INITIAL_CREDITS=50)
+  Cutout Fast/Standard, crop, resize, upscale 2x, enhance, object-fast
+
+Pro (~$19/mo placeholder — set Stripe price)
+  ~500 monthly credits
+  Object-best, upscale 4x, bg replace, higher queue priority
+
+Business (~$49/mo placeholder)
+  ~2000 monthly credits
+  Highest priority, larger batch entitlement (batch UI not built yet)
+
+================================================================================
+7. INFRA / LOCAL RUN
+================================================================================
+
+docker compose up --build
+  Frontend  http://localhost:3000
+  API docs  http://localhost:8000/docs
+  MinIO     http://localhost:9001
+
+Or: postgres + redis + minio via Compose; backend uvicorn; frontend npm run dev
+
+Tests: cd backend && pytest -q  (14 passed as of last run)
+
+Docs
+  docs/ARCHITECTURE.md
+  docs/DEPLOYMENT.md
+  docs/AI_PROVIDER.md
+  docs/STRIPE.md
+  docs/PADDLE.md
+  docs/ADMIN.md
+  docs/PRODUCT_DIRECTION.txt
+  docs/GAP_AND_ROADMAP.txt
+  docs/PHASE1_REPORT.md
+  docs/PHASE2_SPEC.md
+  docs/PHASE3_SPEC.md
+  README.md
+
+================================================================================
+8. WHAT YOU STILL NEED TO PROVIDE (TO GO LIVE)
+================================================================================
+
+  SECRET_KEY                          Production JWT secret
+  REPLICATE_API_TOKEN                 Real AI
+  REMOVEBG_API_KEY                    Optional Pro cutout path
+  STRIPE_SECRET_KEY                   Live or test
+  STRIPE_WEBHOOK_SECRET
+  STRIPE_PRICE_ID_CREDITS
+  STRIPE_PRICE_ID_PRO_MONTHLY
+  STRIPE_PRICE_ID_BUSINESS_MONTHLY
+  PADDLE_*                            Optional second provider (see docs/PADDLE.md)
+  Production S3 credentials + private bucket
+  DNS/TLS for photopol.us
+  Set JOB_EXECUTION_MODE=queue
+  Set USE_SIGNED_URLS=true
+  Set GUEST_LIMITS_ENABLED=true
+  Set DEBUG=false, CORS=https://photopol.us
+
+================================================================================
+9. KEY SOURCE PATHS
+================================================================================
+
+  frontend/src/app/page.tsx                 Landing
+  frontend/src/lib/tools.ts                 Tool client registry + job poll
+  frontend/src/components/workspace/        Studio editor
+  backend/app/services/tool_registry.py     Tool/model/credits/plans
+  backend/app/services/jobs.py              Job create/execute
+  backend/app/worker.py                     Arq worker
+  backend/app/api/routes/jobs.py            Jobs HTTP API
+  backend/app/api/routes/billing.py         Stripe + Paddle
+  docs/STRIPE.md / docs/PADDLE.md           Billing setup
+  backend/alembic/versions/002_phase2.py    Phase 2 migration
+  docker-compose.yml                        Full stack + worker
+
+================================================================================
+END
+================================================================================

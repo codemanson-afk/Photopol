@@ -1,0 +1,56 @@
+Photopol — Brief coverage + gap-fill (intent / result-first)
+Updated: 2026-08-24
+See also: docs/PRODUCT_DIRECTION.txt
+
+================================================================================
+1. PRODUCT IDEA (TARGET)
+================================================================================
+
+ONE CLICK → ONE AI WORKSPACE → AI DOES THE HARD PART → PROFESSIONAL RESULT
+
+Hub:
+  Edit Image      Upload → AI outcomes → Done
+  Create with AI  Describe → AI creates (later)
+  Create Video    Describe + preset → video (later)
+  AI Captions     Upload → captions (later)
+
+================================================================================
+2. EDIT IMAGE FLOW (PRIMARY)
+================================================================================
+
+Upload
+  → AI analyzes (heuristics now; vision/LLM later)
+  → Outcome cards (recommended highlighted)
+  → User picks result OR types custom intent
+  → One recipe run (jobs under the hood)
+  → Before/after + “what we improved”
+  → Export once
+  → Optional: Fine-tune (advanced) — never forced
+
+Outcomes (v1):
+  store_ready     Online store ready
+  professional    Look professional
+  ig_ad           Instagram advertisement
+  custom          Free-text result description
+
+================================================================================
+3. CAPABILITY MATRIX (TECHNICAL — HIDDEN FROM PRIMARY UX)
+================================================================================
+
+Generate / Create with AI                           LATER
+Edit existing via outcomes                          YES
+Remove / replace backgrounds                        YES (inside recipes)
+Object erase                                        YES (advanced / later recipes)
+Upscale / enhance                                   YES (inside recipes)
+Resize / packs                                      YES (inside recipes / export)
+One product surface                                 YES
+
+================================================================================
+4. SUCCESS
+================================================================================
+
+[x] Finish a photo by picking a RESULT, never a tool name
+[x] No download → re-upload to continue
+[x] Credits = Photopol usage / recipe price
+[x] Advanced tools exist but are not the product
+[x] Video / Create / Captions documented, not blocking

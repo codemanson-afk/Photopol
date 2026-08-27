@@ -1,0 +1,1 @@
+"""Photopol FastAPI application package."""
