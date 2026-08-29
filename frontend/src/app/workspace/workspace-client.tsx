@@ -598,7 +598,11 @@ export default function WorkspacePage() {
     const orig = img.versions.find((v) => v.kind === "ORIGINAL");
     setBusy(true);
     setError("");
-    setStatus("Photopol is editing…");
+    setStatus(
+      opts?.intentText || opts?.outcome === "custom"
+        ? "Photopol AI is editing your photo…"
+        : "Photopol is editing…"
+    );
     setLastImproved([]);
     try {
       const res = await runOutcome({

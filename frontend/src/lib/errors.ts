@@ -13,6 +13,9 @@ export function friendlyError(err: unknown): string {
   if (code === "guest_session_failed" || code === "unauthorized") {
     return "Session expired. Refresh the page and try uploading again.";
   }
+  if (code === "prompt_required") {
+    return "Tell Photopol what you want to change, then try again.";
+  }
   if (code === "ai_insufficient_credit") {
     return "AI provider is out of credit. Try again shortly, or contact support.";
   }
@@ -27,6 +30,12 @@ export function friendlyError(err: unknown): string {
   }
   if (code === "file_too_large") {
     return "That image is too large. Use a file under 10MB.";
+  }
+  if (code === "dimension_limit") {
+    return "That photo is too high-resolution to upscale further. Try a smaller crop, or run without upscale.";
+  }
+  if (code === "timeout" || code === "proxy_error") {
+    return "The edit is taking longer than expected. Keep this tab open and try again in a moment.";
   }
 
   // Never surface provider / HTTP jargon to customers

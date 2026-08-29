@@ -39,39 +39,98 @@ def _replicate_run(model: str, input_payload: dict) -> bytes:
             status_code=503,
         )
     client = replicate.Client(api_token=settings.REPLICATE_API_TOKEN)
+    last_exc: Exception | None = None
+    output = None
     try:
-        output = client.run(model, input=input_payload)
-    except ReplicateError as exc:
-        status = getattr(exc, "status", None) or getattr(exc, "status_code", None)
-        detail = str(exc)
-        if status == 402 or "Insufficient credit" in detail:
-            raise AppError(
-                "Replicate account has no credit.",
-                code="ai_insufficient_credit",
-                status_code=402,
-            ) from exc
-        logger.exception("Replicate transform failed")
-        raise AppError("AI processing failed", code="ai_provider_error", status_code=502) from exc
+        for attempt in range(5):
+            try:
+                output = client.run(model, input=input_payload)
+                last_exc = None
+                break
+            except ReplicateError as exc:
+                last_exc = exc
+                status = getattr(exc, "status", None) or getattr(exc, "status_code", None)
+                try:
+                    status_i = int(status) if status is not None else None
+                except (TypeError, ValueError):
+                    status_i = None
+                detail = str(exc)
+                if status_i == 402 or "Insufficient credit" in detail:
+                    raise AppError(
+                        "Replicate account has no credit.",
+                        code="ai_insufficient_credit",
+                        status_code=402,
+                    ) from exc
+                if status_i == 429 or "throttled" in detail.lower() or "rate limit" in detail.lower():
+                    import re
+                    import time
+
+                    wait = 8.0
+                    m = re.search(r"resets in ~?(\d+)", detail, re.I)
+                    if m:
+                        wait = max(wait, float(m.group(1)) + 1.0)
+                    logger.warning("Replicate rate-limited (attempt %s); sleeping %.1fs", attempt + 1, wait)
+                    time.sleep(wait)
+                    # BytesIO inputs need rewind between retries
+                    for v in input_payload.values():
+                        if hasattr(v, "seek"):
+                            try:
+                                v.seek(0)
+                            except Exception:  # noqa: BLE001
+                                pass
+                    continue
+                logger.exception("Replicate transform failed")
+                raise AppError("AI processing failed", code="ai_provider_error", status_code=502) from exc
+        if last_exc is not None:
+            status = getattr(last_exc, "status", None) or getattr(last_exc, "status_code", None)
+            try:
+                status_i = int(status) if status is not None else None
+            except (TypeError, ValueError):
+                status_i = None
+            detail = str(last_exc)
+            if status_i == 429 or "throttled" in detail.lower() or "rate limit" in detail.lower():
+                raise AppError(
+                    "AI provider is rate-limited. Wait and retry (or add ≥$5 Replicate credit).",
+                    code="ai_rate_limited",
+                    status_code=429,
+                ) from last_exc
+            raise AppError("AI processing failed", code="ai_provider_error", status_code=502) from last_exc
+    except AppError:
+        raise
     except Exception as exc:
         logger.exception("Replicate transform failed")
         raise AppError("AI processing failed", code="ai_provider_error", status_code=502) from exc
 
-    if output is None:
-        raise AppError("Empty AI result", code="ai_provider_error", status_code=502)
+    assert output is not None
+
     if isinstance(output, (list, tuple)) and output:
         output = output[0]
+
+    url = None
+    if isinstance(output, str) and output.startswith("http"):
+        url = output
+    else:
+        maybe = getattr(output, "url", None)
+        if maybe:
+            url = str(maybe)
+        else:
+            as_str = str(output)
+            if as_str.startswith("http"):
+                url = as_str
+
+    if url:
+        resp = httpx.get(url, timeout=180.0, follow_redirects=True)
+        resp.raise_for_status()
+        if resp.content:
+            return resp.content
+
     if hasattr(output, "read"):
         data = output.read()
-        return data if isinstance(data, bytes) else bytes(data)
-    if isinstance(output, str) and output.startswith("http"):
-        resp = httpx.get(output, timeout=180.0)
-        resp.raise_for_status()
-        return resp.content
-    url = getattr(output, "url", None)
-    if url:
-        resp = httpx.get(str(url), timeout=180.0)
-        resp.raise_for_status()
-        return resp.content
+        if isinstance(data, bytes) and data:
+            return data
+        if data:
+            return bytes(data)
+
     raise AppError("Unrecognized AI result", code="ai_provider_error", status_code=502)
 
 
@@ -166,8 +225,13 @@ def local_bg_replace(image_bytes: bytes, *, color: str = "#8B5CF6") -> Transform
     )
 
 
+def _replicate_only() -> bool:
+    return (get_settings().AI_BG_PROVIDER or "").lower() == "replicate"
+
+
 def run_upscale(image_bytes: bytes, content_type: str, *, scale: int, model: str) -> TransformResult:
     settings = get_settings()
+    strict = _replicate_only()
     # Primary: Replicate
     if settings.REPLICATE_API_TOKEN and model:
         try:
@@ -184,10 +248,16 @@ def run_upscale(image_bytes: bytes, content_type: str, *, scale: int, model: str
                 meta={"scale": scale, "model": model},
             )
         except AppError as exc:
-            logger.warning("Replicate upscale failed (%s); trying fal/local", exc.code)
-            if exc.code == "ai_not_configured":
+            if strict or exc.code == "ai_not_configured":
                 raise
-    # Failover: fal.ai (optional)
+            logger.warning("Replicate upscale failed (%s); trying fal/local", exc.code)
+    elif strict:
+        raise AppError(
+            "AI provider is not configured. Set REPLICATE_API_TOKEN.",
+            code="ai_not_configured",
+            status_code=503,
+        )
+    # Failover: fal.ai (optional) — skipped when AI_BG_PROVIDER=replicate
     fal_key = getattr(settings, "FAL_KEY", "") or ""
     fal_model = getattr(settings, "FAL_UPSCALE_MODEL", "") or "fal-ai/esrgan"
     if fal_key:
@@ -234,6 +304,7 @@ def run_object_remove(
     model: str,
 ) -> TransformResult:
     settings = get_settings()
+    strict = _replicate_only()
     if settings.REPLICATE_API_TOKEN and model:
         try:
             img_f = io.BytesIO(image_bytes)
@@ -254,26 +325,100 @@ def run_object_remove(
                 meta={"model": model},
             )
         except AppError as exc:
+            if strict or exc.code == "ai_not_configured":
+                raise
             logger.warning("Replicate object remove failed (%s); local fallback", exc.code)
+    elif strict:
+        raise AppError(
+            "AI provider is not configured. Set REPLICATE_API_TOKEN.",
+            code="ai_not_configured",
+            status_code=503,
+        )
     return local_object_remove(image_bytes, mask_bytes)
 
 
 def run_enhance(image_bytes: bytes, content_type: str, *, model: str) -> TransformResult:
     settings = get_settings()
+    strict = _replicate_only()
     if settings.REPLICATE_API_TOKEN and model:
         try:
             file_input = io.BytesIO(image_bytes)
             file_input.name = "input.png"
-            raw = _replicate_run(model, {"image": file_input})
+            # Real-ESRGAN defaults to scale=4; keep size for "enhance" (sharpen/polish only).
+            raw = _replicate_run(model, {"image": file_input, "scale": 1, "face_enhance": False})
             return TransformResult(
                 image_bytes=raw,
                 content_type="image/png",
                 provider="replicate",
-                meta={"model": model},
+                meta={"model": model, "scale": 1},
             )
         except AppError as exc:
+            if strict or exc.code == "ai_not_configured":
+                raise
             logger.warning("Replicate enhance failed (%s); local fallback", exc.code)
+    elif strict:
+        raise AppError(
+            "AI provider is not configured. Set REPLICATE_API_TOKEN.",
+            code="ai_not_configured",
+            status_code=503,
+        )
     return local_enhance(image_bytes)
+
+
+def _wrap_ai_edit_prompt(user_prompt: str) -> str:
+    text = (user_prompt or "").strip()
+    return (
+        "Edit this photo according to the user's request. "
+        "Preserve the main subject identity, product details, and overall framing "
+        "unless the user explicitly asks to change them.\n"
+        f"User request: {text}"
+    )
+
+
+def run_ai_edit(
+    image_bytes: bytes,
+    content_type: str,
+    *,
+    prompt: str,
+    model: str,
+) -> TransformResult:
+    """Instruction-following image edit via Replicate (Flux Kontext)."""
+    settings = get_settings()
+    text = (prompt or "").strip()
+    if not text:
+        raise AppError("Describe what you want to change.", code="prompt_required", status_code=400)
+    if not settings.REPLICATE_API_TOKEN:
+        raise AppError(
+            "AI provider is not configured. Set REPLICATE_API_TOKEN.",
+            code="ai_not_configured",
+            status_code=503,
+        )
+    if not model:
+        model = settings.REPLICATE_AI_EDIT_MODEL
+    file_input = io.BytesIO(image_bytes)
+    ext = "png"
+    ct = (content_type or "").lower()
+    if "jpeg" in ct or "jpg" in ct:
+        ext = "jpg"
+    elif "webp" in ct:
+        ext = "webp"
+    file_input.name = f"input.{ext}"
+    raw = _replicate_run(
+        model,
+        {
+            "prompt": _wrap_ai_edit_prompt(text),
+            "input_image": file_input,
+            "aspect_ratio": "match_input_image",
+            "output_format": "png",
+            "safety_tolerance": 2,
+        },
+    )
+    return TransformResult(
+        image_bytes=raw,
+        content_type="image/png",
+        provider="replicate",
+        meta={"model": model, "prompt": text},
+    )
 
 
 def run_bg_replace(

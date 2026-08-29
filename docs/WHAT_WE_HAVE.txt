@@ -40,11 +40,15 @@ Phase 3 — IMPLEMENTED IN CODE
   Admin Ops console (users/jobs/projects/credits/billing/audit)
 
   Not done yet (ops / polish):
-  - Live Replicate E2E (needs REPLICATE_API_TOKEN)
   - Live Stripe E2E (needs Stripe keys + price IDs)
   - photopol.us DNS/TLS + production deploy
   - Flip prod flags: JOB_EXECUTION_MODE=queue, USE_SIGNED_URLS=true,
     GUEST_LIMITS_ENABLED=true
+
+  AI provider (local / staging):
+  - Replicate-only when AI_BG_PROVIDER=replicate + REPLICATE_API_TOKEN
+    (no remove.bg / rembg / fal fallback). Smoke: python -m scripts.smoke_replicate
+  - Live predictions need Replicate account credit (token auth alone is not enough)
 
 Product direction pivot (2026-08):
   Result-first hub — Edit Image | AI Auto Edit | Create / Video / Captions (later)
@@ -65,6 +69,7 @@ object_remove    Object Remove         8 (best 20)         free (Pro for best)
 upscale          Upscale               6 (2x) / 14 (4x)    free / Pro for 4x
 enhance          Enhance               4                   free
 bg_replace       Background Replace    12                  Pro
+ai_edit          Ask AI (Kontext)      15                  free (NL photo edit)
 resize           Resize                1                   free
 crop             Crop                  1                   free
 
@@ -140,7 +145,8 @@ Admin
   API under /api/admin/* · admin_audit_logs
 
 AI providers
-  Background: local rembg | remove.bg | Replicate (AI_BG_PROVIDER)
+  Background: Replicate when AI_BG_PROVIDER=replicate (else remove.bg / rembg / auto)
+  Object remove: allenhooo/lama (pinned version; cjwbw/lama retired)
   Object remove / upscale / enhance: Replicate with local fallbacks
   Tool registry: backend/app/services/tool_registry.py
 
@@ -192,8 +198,7 @@ Docs
 ================================================================================
 
   SECRET_KEY                          Production JWT secret
-  REPLICATE_API_TOKEN                 Real AI
-  REMOVEBG_API_KEY                    Optional Pro cutout path
+  REPLICATE_API_TOKEN                 Real AI (AI_BG_PROVIDER=replicate)
   STRIPE_SECRET_KEY                   Live or test
   STRIPE_WEBHOOK_SECRET
   STRIPE_PRICE_ID_CREDITS
@@ -206,6 +211,7 @@ Docs
   Set USE_SIGNED_URLS=true
   Set GUEST_LIMITS_ENABLED=true
   Set DEBUG=false, CORS=https://photopol.us
+  Set AI_BG_PROVIDER=replicate (Replicate-only; leave REMOVEBG/FAL empty)
 
 ================================================================================
 9. KEY SOURCE PATHS

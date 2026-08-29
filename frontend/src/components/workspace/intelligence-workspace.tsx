@@ -158,12 +158,9 @@ const CHIP_ICONS: Record<IntentChipId, ReactNode> = {
 
 const DEFAULT_IMPROVES =
   OUTCOMES.find((o) => o.id === "store_ready")?.improves || [
-    "Removed distracting background",
     "Enhanced lighting and color",
     "Sharpened product details",
-    "Added natural shadow",
-    "Centered and optimized composition",
-    "Exported in high quality",
+    "Removed distracting background",
   ];
 
 export function IntelligenceWorkspace({

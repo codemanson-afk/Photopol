@@ -411,79 +411,48 @@ class PipelineService:
 
         s = self.settings
 
-        def credits_store() -> int:
-            n = s.CREDIT_COST_ENHANCE + s.CREDIT_COST_BACKGROUND_REMOVAL
-            if can_studio:
-                n += s.CREDIT_COST_BG_REPLACE
-            if small:
-                n += s.CREDIT_COST_UPSCALE_2X
-            return n
-
-        def credits_pro() -> int:
-            n = s.CREDIT_COST_ENHANCE
-            if small:
-                n += s.CREDIT_COST_UPSCALE_2X
-            if aspect_off:
-                n += s.CREDIT_COST_CROP
-            return n
-
-        def credits_ig() -> int:
-            n = s.CREDIT_COST_ENHANCE + s.CREDIT_COST_BACKGROUND_REMOVAL + s.CREDIT_COST_CROP
-            if can_studio:
-                n += s.CREDIT_COST_BG_REPLACE
-            if small:
-                n += s.CREDIT_COST_UPSCALE_2X
-            return n
+        # Outcome recipes are enhance + remove_bg only (no upscale / crop / bg_replace).
+        recipe_credits = s.CREDIT_COST_ENHANCE + s.CREDIT_COST_BACKGROUND_REMOVAL
+        improves_base = [
+            "Enhanced lighting and color",
+            "Sharpened product details",
+            "Removed distracting background",
+        ]
 
         outcomes = [
             {
                 "id": "store_ready",
                 "label": "Ready for Online Store",
-                "blurb": "Clean backdrop, polish, soft shadow — ready for your shop.",
-                "improves": [
-                    "Removed distracting background",
-                    "Enhanced lighting and color",
-                    "Sharpened product details",
-                    "Added natural shadow",
-                    "Centered and optimized composition",
-                    "Exported in high quality",
-                ],
-                "credits": credits_store(),
+                "blurb": "Polish and clean cutout — ready for your shop.",
+                "improves": list(improves_base),
+                "credits": recipe_credits,
                 "recommended": recommended == "store_ready",
             },
             {
                 "id": "professional",
                 "label": "Make it Professional",
-                "blurb": "AI decides what to fix so the photo feels finished.",
-                "improves": [
-                    "Enhanced lighting and color",
-                    "Sharpened details",
-                    "Balanced composition",
-                    "Exported in high quality",
-                ],
-                "credits": credits_pro(),
+                "blurb": "Enhance and cut out so the photo feels finished.",
+                "improves": list(improves_base),
+                "credits": recipe_credits,
                 "recommended": recommended == "professional",
             },
             {
                 "id": "ig_ad",
                 "label": "Create an Advertisement",
-                "blurb": "Composition and size tuned for Instagram ads & feed.",
-                "improves": [
-                    "Removed distracting background",
-                    "Enhanced lighting and color",
-                    "Eye-catching polish",
-                    "Feed-ready framing",
-                    "Exported in high quality",
-                ],
-                "credits": credits_ig(),
+                "blurb": "Polish and cutout ready for ads & feed.",
+                "improves": list(improves_base),
+                "credits": recipe_credits,
                 "recommended": recommended == "ig_ad",
             },
             {
                 "id": "custom",
                 "label": "Describe what you want",
-                "blurb": "Tell Photopol the result in plain language.",
-                "improves": ["AI mapped your request to the right edits", "Exported in high quality"],
-                "credits": credits_pro(),
+                "blurb": "Tell Photopol in plain language — AI edits this photo for you.",
+                "improves": [
+                    "Applied your request with AI",
+                    "Edited this photo from your description",
+                ],
+                "credits": s.CREDIT_COST_AI_EDIT,
                 "recommended": False,
             },
         ]
@@ -519,38 +488,31 @@ class PipelineService:
             user, project_id=project_id, image_id=image_id, version_id=version_id
         )
         oid = (outcome or "").strip().lower()
-        if oid == "custom":
-            oid = self._infer_outcome(intent_text)
-        if oid not in ("store_ready", "professional", "ig_ad"):
+        prompt = (intent_text or "").strip()
+        # Free-text Ask AI → real Replicate instruction edit (not keyword recipes).
+        is_ask = oid == "custom" or (bool(prompt) and oid not in ("store_ready", "professional", "ig_ad"))
+        if is_ask and not prompt:
+            raise AppError(
+                "Describe what you want to change.",
+                code="prompt_required",
+                status_code=400,
+            )
+        if not is_ask and oid not in ("store_ready", "professional", "ig_ad"):
             oid = "professional"
 
         vid = (variant or "").strip().lower() or None
-        # Variant presets override look params
-        if vid == "premium_look":
-            oid = "store_ready"
-            bg_color = "#1C1917"
-        elif vid == "white_bg":
-            oid = "store_ready"
-            bg_color = "#FFFFFF"
-        elif vid == "lifestyle":
-            oid = "store_ready"
-            bg_color = "#F5F0E8"
-        elif vid == "ig_square":
-            oid = "ig_ad"
-            bg_color = bg_color or "#F5F0E8"
-        elif vid == "ig_story":
-            oid = "ig_ad"
-            bg_color = bg_color or "#F5F0E8"
-
-        plan = self.jobs._user_plan(user)  # noqa: SLF001
-        can_studio = plan in ("pro", "business", "admin") or free
-        small = bool(analysis.get("needs_upscale"))
-        aspect_off = bool(analysis.get("needs_fit"))
+        # Variant presets map to outcome labels (same slim recipe for all).
+        if not is_ask:
+            if vid in ("premium_look", "white_bg", "lifestyle"):
+                oid = "store_ready"
+            elif vid in ("ig_square", "ig_story"):
+                oid = "ig_ad"
 
         labels = {
             "store_ready": "Ready for Online Store",
             "professional": "Make it Professional",
             "ig_ad": "Create an Advertisement",
+            "custom": "Your request",
         }
         variant_labels = {
             "premium_look": "Premium Look",
@@ -561,25 +523,23 @@ class PipelineService:
         }
         improves_map = {
             "store_ready": [
-                "Removed distracting background",
                 "Enhanced lighting and color",
                 "Sharpened product details",
-                "Added natural shadow",
-                "Centered and optimized composition",
-                "Exported in high quality",
+                "Removed distracting background",
             ],
             "professional": [
                 "Enhanced lighting and color",
-                "Sharpened details",
-                "Balanced composition",
-                "Exported in high quality",
+                "Sharpened product details",
+                "Removed distracting background",
             ],
             "ig_ad": [
-                "Removed distracting background",
                 "Enhanced lighting and color",
-                "Eye-catching polish",
-                "Feed-ready framing",
-                "Exported in high quality",
+                "Sharpened product details",
+                "Removed distracting background",
+            ],
+            "custom": [
+                "Applied your request with AI",
+                "Edited this photo from your description",
             ],
         }
 
@@ -618,75 +578,41 @@ class PipelineService:
             applied.append(tool)
             return job
 
-        # Always start with polish
+        if is_ask:
+            run_step("ai_edit", model_id="ai-edit-kontext", params={"prompt": prompt})
+            improved.append("Applied your request with AI")
+            improved.append("Edited this photo from your description")
+            oid = "custom"
+            out_label = "Your request"
+            pack = None
+            what_we_improved = list(improved)
+            card = next((o for o in analysis["outcomes"] if o["id"] == "custom"), None)
+            estimate = int(card["credits"]) if card else credits_total
+            return {
+                "pipeline": "outcome",
+                "outcome": oid,
+                "variant": None,
+                "outcome_label": out_label,
+                "session_id": session_id,
+                "job_ids": job_ids,
+                "steps_applied": applied,
+                "credits_charged": credits_total if not free else 0,
+                "recipe_credits_estimate": estimate,
+                "result_version_id": str(current_vid) if current_vid else None,
+                "what_we_improved": what_we_improved,
+                "summary": f"Finished: {out_label}.",
+                "insight": analysis.get("insight"),
+                "pack": pack,
+                "intent_text": prompt,
+            }
+
+        # Slim preset recipe: enhance + remove background only.
         run_step("enhance")
         improved.append("Enhanced lighting and color")
         improved.append("Sharpened product details")
 
-        need_cut = oid in ("store_ready", "ig_ad") or vid in (
-            "premium_look",
-            "white_bg",
-            "lifestyle",
-            "ig_square",
-            "ig_story",
-        )
-        if need_cut:
-            run_step("remove_bg", model_id="bg-standard")
-            improved.append("Removed distracting background")
-            if can_studio or free:
-                color = bg_color or ("#FFFFFF" if oid == "store_ready" else "#8B5CF6")
-                drop = oid == "store_ready" or vid in ("premium_look", "white_bg", "lifestyle")
-                run_step(
-                    "bg_replace",
-                    params={
-                        "color": color,
-                        "drop_shadow": drop,
-                        "subject_scale": 100,
-                        "position": "center",
-                        "skip_recut": True,
-                    },
-                )
-                if drop:
-                    improved.append("Added natural shadow")
-                improved.append("Centered and optimized composition")
-
-        if small:
-            run_step("upscale", model_id="upscale-2x", params={"scale": 2})
-            if "Sharpened product details" not in improved:
-                improved.append("Sharpened product details")
-
-        # Framing
-        if current_vid and (
-            oid == "ig_ad"
-            or vid in ("ig_square", "ig_story")
-            or (oid == "professional" and aspect_off)
-            or (oid == "store_ready" and aspect_off)
-        ):
-            ver = (
-                self.db.query(ImageVersion)
-                .filter(ImageVersion.id == current_vid, ImageVersion.image_id == image_id)
-                .first()
-            )
-            vw = int(getattr(ver, "width", 0) or analysis.get("width") or 0)
-            vh = int(getattr(ver, "height", 0) or analysis.get("height") or 0)
-            if vw > 0 and vh > 0:
-                if vid == "ig_story":
-                    run_step("crop", params=_center_crop_aspect(vw, vh, 9, 16))
-                    if "Centered and optimized composition" not in improved:
-                        improved.append("Centered and optimized composition")
-                elif oid == "ig_ad" or vid == "ig_square" or aspect_off:
-                    run_step("crop", params=_center_crop_1x1(vw, vh))
-                    if "Centered and optimized composition" not in improved:
-                        improved.append("Centered and optimized composition")
-
-        if current_vid and (oid == "ig_ad" or vid == "ig_square"):
-            run_step("resize", params={"width": 1080, "height": 1080, "fit": "cover"})
-            improved.append("Exported in high quality")
-        elif current_vid and vid == "ig_story":
-            run_step("resize", params={"width": 1080, "height": 1920, "fit": "cover"})
-            improved.append("Exported in high quality")
-        else:
-            improved.append("Exported in high quality")
+        run_step("remove_bg", model_id="bg-standard")
+        improved.append("Removed distracting background")
 
         pack = None
         if export_pack and oid == "store_ready" and current_vid and not vid:

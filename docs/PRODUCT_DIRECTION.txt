@@ -56,17 +56,20 @@ OUTCOME EXAMPLES (Edit Image)
 ================================================================================
 
 “Make this ready for my online store.”
-  → clean backdrop, quality, lighting, centering, soft shadow, shop sizes
+  → enhance + remove background (cutout)
 
 “Make this look professional.”
-  → AI decides what to fix (color, sharpness, framing…)
+  → enhance + remove background
 
 “Make this an Instagram advertisement.”
-  → composition, size, backdrop, polish for IG
+  → enhance + remove background
 
-Custom: user types the result in plain language → AI maps to a recipe.
+Custom: user types the result in plain language → Replicate Flux Kontext edits THIS photo
+  (real instruction-following AI, not keyword recipes).
 
-Show humans WHAT will improve (Clean backdrop · Sharper · Square for feed) —
+Presets (store / professional / IG chips): enhance + remove background.
+
+Show humans WHAT will improve (Lighting · Sharper · Clean backdrop / Applied your request) —
 never model or tool SKUs.
 
 ================================================================================

@@ -47,44 +47,41 @@ export const OUTCOMES: OutcomeDef[] = [
   {
     id: "store_ready",
     label: "Ready for Online Store",
-    blurb: "Clean backdrop, polish, soft shadow — ready for your shop.",
+    blurb: "Polish and clean cutout — ready for your shop.",
     improves: [
-      "Removed distracting background",
       "Enhanced lighting and color",
       "Sharpened product details",
-      "Added natural shadow",
-      "Centered and optimized composition",
-      "Exported in high quality",
+      "Removed distracting background",
     ],
   },
   {
     id: "professional",
     label: "Make it Professional",
-    blurb: "AI decides what to fix so the photo feels finished.",
+    blurb: "Enhance and cut out so the photo feels finished.",
     improves: [
       "Enhanced lighting and color",
-      "Sharpened details",
-      "Balanced composition",
-      "Exported in high quality",
+      "Sharpened product details",
+      "Removed distracting background",
     ],
   },
   {
     id: "ig_ad",
     label: "Create an Advertisement",
-    blurb: "Composition and size tuned for ads & feed.",
+    blurb: "Polish and cutout ready for ads & feed.",
     improves: [
-      "Removed distracting background",
       "Enhanced lighting and color",
-      "Eye-catching polish",
-      "Feed-ready framing",
-      "Exported in high quality",
+      "Sharpened product details",
+      "Removed distracting background",
     ],
   },
   {
     id: "custom",
     label: "Describe what you want",
-    blurb: "Tell Photopol the result in plain language.",
-    improves: ["AI mapped your request to the right edits", "Exported in high quality"],
+    blurb: "Tell Photopol in plain language — AI edits this photo for you.",
+    improves: [
+      "Applied your request with AI",
+      "Edited this photo from your description",
+    ],
   },
 ];
 

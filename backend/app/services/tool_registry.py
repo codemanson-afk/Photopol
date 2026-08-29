@@ -160,6 +160,21 @@ def _registry() -> Dict[str, ToolDef]:
                 ),
             ],
         ),
+        "ai_edit": ToolDef(
+            id="ai_edit",
+            job_type=JobType.ENHANCE,
+            label="Ask AI Edit",
+            async_job=True,
+            models=[
+                ModelDef(
+                    id="ai-edit-kontext",
+                    credits=s.CREDIT_COST_AI_EDIT,
+                    plan_min="free",
+                    provider="replicate",
+                    replicate_model=s.REPLICATE_AI_EDIT_MODEL,
+                ),
+            ],
+        ),
     }
 
 

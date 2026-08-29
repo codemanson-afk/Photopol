@@ -1,77 +1,89 @@
-Photopol — Run servers (local)
+Photopol — How to run on localhost (Windows)
+============================================
+Updated: 2026-08-29
 
-================================================================================
-QUICK START (what we use day-to-day)
-================================================================================
+Open TWO terminals from the project folder:
+  C:\Users\mbenj\OneDrive - Anwita Digital\Documents\imageai
 
-Terminal 1 — Backend (port 8001)
---------------------------------
+
+--------------------------------------------------------------------------------
+1) BACKEND (API)
+--------------------------------------------------------------------------------
+
 cd backend
 .venv\Scripts\activate
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
 
-API:  http://127.0.0.1:8001
-Docs: http://127.0.0.1:8001/docs
+REM Default local port (match frontend/.env.local BACKEND_URL):
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+API:   http://127.0.0.1:8000
+Docs:  http://127.0.0.1:8000/docs
+Health: http://127.0.0.1:8000/api/health
 
 
-Terminal 2 — Frontend (port 3000)
----------------------------------
+First time only (if .venv missing):
+  cd backend
+  python -m venv .venv
+  .venv\Scripts\activate
+  pip install -r requirements.txt
+
+AI settings live in backend\.env (same folder uvicorn runs from):
+  REPLICATE_API_TOKEN=r8_...
+  AI_BG_PROVIDER=replicate
+  REPLICATE_OBJECT_REMOVE_MODEL=allenhooo/lama:cdac78a1bec5b23c07fd29692fb70baa513ea403a39e643c48ec5edadb15fe72
+  REMOVEBG_API_KEY=
+  FAL_KEY=
+
+Never commit .env. Replicate needs account credit (and ≥$5 helps avoid rate limits).
+
+
+--------------------------------------------------------------------------------
+2) FRONTEND (website)
+--------------------------------------------------------------------------------
+
 cd frontend
+
+REM Must match uvicorn port (see frontend\.env.local):
+REM   BACKEND_URL=http://127.0.0.1:8000
+REM   NEXT_PUBLIC_API_URL=/api
+
 npm run dev
 
-App: http://localhost:3000
+App:  http://localhost:3000
+Edit: http://localhost:3000/workspace
 
 
-Note: frontend/.env.local should point at the backend:
-  BACKEND_URL=http://127.0.0.1:8001
-  NEXT_PUBLIC_API_URL=http://127.0.0.1:8001/api
+--------------------------------------------------------------------------------
+3) QUICK CHECK
+--------------------------------------------------------------------------------
 
-================================================================================
-OPTIONAL — Infra (if not using local/SQLite-only setup)
-================================================================================
+1. Open http://127.0.0.1:8000/api/health  → should say photopol-api
+2. Open http://localhost:3000
+3. Go to Workspace → upload a photo → try Edit Image
 
-From repo root:
+If you see "Session expired":
+  - Confirm BACKEND_URL port matches uvicorn
+  - Restart frontend (npm run dev) after changing .env.local
+  - Hard-refresh the browser (Ctrl+Shift+R) to clear the old guest token
 
+
+--------------------------------------------------------------------------------
+OPTIONAL — Docker infra (Postgres / Redis / MinIO)
+--------------------------------------------------------------------------------
+
+From project root:
   docker compose up -d postgres redis minio
 
-================================================================================
-OPTIONAL — Full Docker stack
-================================================================================
 
-From repo root:
-
-  docker compose up --build
-
-  Frontend  http://localhost:3000
-  API       http://localhost:8000/docs
-  MinIO     http://localhost:9001
-
-Worker (when JOB_EXECUTION_MODE=queue):
-
-  docker compose up worker
-
-Or locally:
-
-  cd backend
-  .venv\Scripts\activate
-  arq app.worker.WorkerSettings
-
-================================================================================
-OPTIONAL — First-time backend setup
-================================================================================
+--------------------------------------------------------------------------------
+OPTIONAL — Smoke test (Replicate live)
+--------------------------------------------------------------------------------
 
 cd backend
-python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
-alembic upgrade head
+set SMOKE_API_BASE=http://127.0.0.1:8000/api
+python -m scripts.smoke_replicate
 
-Create admin:
-
-  docker compose exec backend python -m scripts.create_admin admin@photopol.us "YourSecurePass!" "Admin"
-
-  # or locally from backend/:
-  python -m scripts.create_admin admin@photopol.us "YourSecurePass!" "Admin"
 
 ================================================================================
 END

@@ -40,6 +40,7 @@ from app.services.tool_registry import (
     get_tool,
 )
 from app.services.transforms import (
+    run_ai_edit,
     run_bg_replace,
     run_enhance,
     run_object_remove,
@@ -127,6 +128,8 @@ class JobService:
 
         if tool == "object_remove" and not params.get("mask_storage_key"):
             raise AppError("mask_storage_key required", code="mask_required", status_code=400)
+        if tool == "ai_edit" and not str(params.get("prompt") or "").strip():
+            raise AppError("Describe what you want to change.", code="prompt_required", status_code=400)
 
         if idempotency_key:
             existing = (
@@ -338,17 +341,42 @@ class JobService:
                 scale = int(params.get("scale") or 2)
                 model = get_model("upscale", job.model_id)
                 w, h, _ = read_image_meta(source_bytes)
-                if max(w, h) * scale > self.settings.MAX_IMAGE_DIMENSION:
-                    raise AppError("Result too large", code="dimension_limit", status_code=400)
-                out = run_upscale(
-                    source_bytes,
-                    content_type,
-                    scale=scale,
-                    model=model.replicate_model or self.settings.REPLICATE_UPSCALE_MODEL,
-                )
-                result_bytes, result_ct = out.image_bytes, out.content_type
-                provider = out.provider
-                meta = out.meta or {"scale": scale}
+                max_dim = self.settings.MAX_IMAGE_DIMENSION
+                longest = max(w, h)
+                if longest * scale > max_dim:
+                    # Clamp scale so result stays within limit; skip if already at/near max.
+                    allowed = max(1, max_dim // max(longest, 1))
+                    if allowed < 2:
+                        result_bytes, result_ct = source_bytes, content_type
+                        provider = "skipped_upscale"
+                        meta = {
+                            "scale": 1,
+                            "skipped": True,
+                            "reason": "dimension_limit",
+                            "width": w,
+                            "height": h,
+                        }
+                    else:
+                        scale = min(scale, allowed)
+                        out = run_upscale(
+                            source_bytes,
+                            content_type,
+                            scale=scale,
+                            model=model.replicate_model or self.settings.REPLICATE_UPSCALE_MODEL,
+                        )
+                        result_bytes, result_ct = out.image_bytes, out.content_type
+                        provider = out.provider
+                        meta = {**(out.meta or {}), "scale": scale, "clamped": True}
+                else:
+                    out = run_upscale(
+                        source_bytes,
+                        content_type,
+                        scale=scale,
+                        model=model.replicate_model or self.settings.REPLICATE_UPSCALE_MODEL,
+                    )
+                    result_bytes, result_ct = out.image_bytes, out.content_type
+                    provider = out.provider
+                    meta = out.meta or {"scale": scale}
             elif tool == "object_remove":
                 mask_key = params.get("mask_storage_key")
                 if not mask_key:
@@ -412,6 +440,17 @@ class JobService:
                     result_bytes, result_ct = out.image_bytes, out.content_type
                     provider = out.provider
                     meta = out.meta or {}
+            elif tool == "ai_edit":
+                model = get_model("ai_edit", job.model_id)
+                out = run_ai_edit(
+                    source_bytes,
+                    content_type,
+                    prompt=str(params.get("prompt") or ""),
+                    model=model.replicate_model or self.settings.REPLICATE_AI_EDIT_MODEL,
+                )
+                result_bytes, result_ct = out.image_bytes, out.content_type
+                provider = out.provider
+                meta = out.meta or {}
             else:
                 raise AppError(f"Unsupported tool {tool}", code="unknown_tool", status_code=400)
 

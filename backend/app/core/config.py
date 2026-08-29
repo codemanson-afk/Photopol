@@ -48,12 +48,17 @@ class Settings(BaseSettings):
     CREDIT_COST_UPSCALE_4X: int = 14
     CREDIT_COST_ENHANCE: int = 4
     CREDIT_COST_BG_REPLACE: int = 12
+    CREDIT_COST_AI_EDIT: int = 15
 
     REPLICATE_API_TOKEN: str = ""
     REPLICATE_BG_REMOVAL_MODEL: str = "recraft-ai/recraft-remove-background"
     REPLICATE_UPSCALE_MODEL: str = "nightmareai/real-esrgan"
-    REPLICATE_OBJECT_REMOVE_MODEL: str = "cjwbw/lama"
+    REPLICATE_OBJECT_REMOVE_MODEL: str = (
+        "allenhooo/lama:cdac78a1bec5b23c07fd29692fb70baa513ea403a39e643c48ec5edadb15fe72"
+    )
     REPLICATE_ENHANCE_MODEL: str = "nightmareai/real-esrgan"
+    # NL image edit (Ask AI) — Flux Kontext Pro on Replicate
+    REPLICATE_AI_EDIT_MODEL: str = "black-forest-labs/flux-kontext-pro"
     REMOVEBG_API_KEY: str = ""
     # removebg | replicate | local | auto (removebg → local rembg)
     AI_BG_PROVIDER: str = "auto"

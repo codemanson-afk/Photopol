@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
   async rewrites() {
     const api = process.env.BACKEND_URL || "http://127.0.0.1:8000";
     return [
-      { source: "/api/:path*", destination: `${api}/api/:path*` },
+      // /api/* is handled by src/app/api/[...path]/route.ts (long timeout for AI jobs)
       { source: "/media/:path*", destination: `${api}/media/:path*` },
     ];
   },

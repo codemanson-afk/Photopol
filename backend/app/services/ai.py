@@ -166,10 +166,46 @@ class ReplicateBackgroundRemovalProvider(BackgroundRemovalProvider):
             file_input = io.BytesIO(image_bytes)
             file_input.name = "input.png"
 
-            output = client.run(
-                self.model,
-                input={"image": file_input},
-            )
+            output = None
+            last_exc: Exception | None = None
+            for attempt in range(5):
+                try:
+                    file_input.seek(0)
+                    output = client.run(
+                        self.model,
+                        input={"image": file_input},
+                    )
+                    last_exc = None
+                    break
+                except ReplicateError as exc:
+                    last_exc = exc
+                    status = getattr(exc, "status", None) or getattr(exc, "status_code", None)
+                    try:
+                        status_i = int(status) if status is not None else None
+                    except (TypeError, ValueError):
+                        status_i = None
+                    detail = str(exc)
+                    if status_i == 402 or "Insufficient credit" in detail:
+                        raise AppError(
+                            "Replicate account has no credit. Add billing at replicate.com/account/billing",
+                            code="ai_insufficient_credit",
+                            status_code=402,
+                        ) from exc
+                    if status_i == 429 or "throttled" in detail.lower() or "rate limit" in detail.lower():
+                        import time
+                        import re
+
+                        wait = 8.0
+                        m = re.search(r"resets in ~?(\d+)", detail, re.I)
+                        if m:
+                            wait = max(wait, float(m.group(1)) + 1.0)
+                        logger.warning("Replicate rate-limited (attempt %s); sleeping %.1fs", attempt + 1, wait)
+                        time.sleep(wait)
+                        continue
+                    raise
+            if last_exc is not None:
+                raise last_exc
+            assert output is not None
 
             result_bytes = self._resolve_output(output, client)
             return BackgroundRemovalResult(
@@ -182,12 +218,22 @@ class ReplicateBackgroundRemovalProvider(BackgroundRemovalProvider):
             raise
         except ReplicateError as exc:
             status = getattr(exc, "status", None) or getattr(exc, "status_code", None)
+            try:
+                status_i = int(status) if status is not None else None
+            except (TypeError, ValueError):
+                status_i = None
             detail = str(exc)
-            if status == 402 or "Insufficient credit" in detail:
+            if status_i == 402 or "Insufficient credit" in detail:
                 raise AppError(
                     "Replicate account has no credit. Add billing at replicate.com/account/billing",
                     code="ai_insufficient_credit",
                     status_code=402,
+                ) from exc
+            if status_i == 429 or "throttled" in detail.lower() or "rate limit" in detail.lower():
+                raise AppError(
+                    "AI provider is rate-limited. Wait a few seconds and try again (or add ≥$5 Replicate credit).",
+                    code="ai_rate_limited",
+                    status_code=429,
                 ) from exc
             logger.exception("Replicate background removal failed")
             raise AppError(
@@ -206,28 +252,37 @@ class ReplicateBackgroundRemovalProvider(BackgroundRemovalProvider):
     def _resolve_output(self, output, client) -> bytes:
         import httpx
 
+        _ = client
         if output is None:
             raise AppError("Empty AI result", code="ai_provider_error", status_code=502)
 
         if isinstance(output, (list, tuple)) and output:
             output = output[0]
 
+        url = None
+        if isinstance(output, str) and output.startswith("http"):
+            url = output
+        else:
+            maybe = getattr(output, "url", None)
+            if maybe:
+                url = str(maybe)
+            else:
+                as_str = str(output)
+                if as_str.startswith("http"):
+                    url = as_str
+
+        if url:
+            resp = httpx.get(url, timeout=120.0, follow_redirects=True)
+            resp.raise_for_status()
+            if resp.content:
+                return resp.content
+
         if hasattr(output, "read"):
             data = output.read()
-            if isinstance(data, bytes):
+            if isinstance(data, bytes) and data:
                 return data
-            return bytes(data)
-
-        if isinstance(output, str) and output.startswith("http"):
-            resp = httpx.get(output, timeout=120.0)
-            resp.raise_for_status()
-            return resp.content
-
-        url = getattr(output, "url", None)
-        if url:
-            resp = httpx.get(str(url), timeout=120.0)
-            resp.raise_for_status()
-            return resp.content
+            if data:
+                return bytes(data)
 
         raise AppError("Unrecognized AI result format", code="ai_provider_error", status_code=502)
 
