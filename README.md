@@ -29,12 +29,24 @@
 >
 > Until the outstanding payment is resolved, this project should not be represented as a fully paid development project.
 
+---
 
-"""
-Photopol — One AI Workspace for Every Image
+## 📋 Project Documentation & Third-Party Review
 
-Create. Edit. Enhance. Resize. Export.
-"""
+A third-party analysis/review of the Photopol project was commissioned by the client during development.
+
+The analysis report supplied/commissioned by the client is preserved in this repository:
+
+**[Third-Party — Photopol Analysis Report](./Third%20Party%20-%20Photopol%20Analysis%20Report_260830_223702.pdf)**
+
+The purpose of retaining the report in this repository is to maintain a transparent project record, including documentation relating to the technical review performed during the development period.
+
+The report represents the third-party review and should be understood as such; its findings and conclusions belong to the party that produced the report.
+
+
+""" Photopol — One AI Workspace for Every Image
+
+Create. Edit. Enhance. Resize. Export."""
 
 ## Stack
 
