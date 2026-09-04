@@ -44,9 +44,9 @@ The purpose of retaining the report in this repository is to maintain a transpar
 The report represents the third-party review and should be understood as such; its findings and conclusions belong to the party that produced the report.
 
 
-""" Photopol — One AI Workspace for Every Image
+## Photopol — One AI Workspace for Every Image
 
-Create. Edit. Enhance. Resize. Export."""
+Create. Edit. Enhance. Resize. Export.##
 
 ## Stack
 
