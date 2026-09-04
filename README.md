@@ -1,4 +1,4 @@
-# Photopol Project - ⚠️ PAYMENT NOTICE — PROJECT CURRENTLY UNPAID
+# Scam Alert - Photopol Project - ⚠️ PAYMENT NOTICE — PROJECT CURRENTLY UNPAID
 
 > ## 🚨 IMPORTANT — OUTSTANDING PAYMENT
 >
@@ -20,7 +20,7 @@
 >
 > The report is retained here as a record of the third-party analysis commissioned by the client.
 >
-> **Client / Agency:** Ngu Agency  https://Nguagency.com
+> **Client / Agency:** Ngu Agency  https://Nguagency.com Alert this is scam company
 > 
 > **Telegram:** @nguagancy  
 > **Project Domain:** https://photopol.us/
