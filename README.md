@@ -1,3 +1,24 @@
+# ⚠️ PAYMENT NOTICE — PROJECT CURRENTLY UNPAID
+
+> ## 🚨 IMPORTANT — OUTSTANDING PAYMENT
+>
+> **This project was developed for Ngu Agency / Nguagancy and the intended project website is [photopol.us](https://photopol.us/).**
+>
+> **As of September 4, 2026, the developer has not received the agreed payment for the development work associated with this project.**
+>
+> **The project contains development work completed by the developer, but the agreed outstanding payment remains unpaid.**
+>
+> **This repository is being maintained with this notice for transparency and to document the current payment status of the project.**
+>
+> **Client / Agency:** Ngu Agency  
+> **Telegram:** @nguagancy  
+> **Project Domain:** https://photopol.us/
+>
+> **Payment Status: ❌ OUTSTANDING**
+>
+> Until the outstanding payment is resolved, this project should not be represented as a fully paid development project.
+
+
 """
 Photopol — One AI Workspace for Every Image
 
