@@ -10,7 +10,7 @@
 >
 > **This repository is being maintained with this notice for transparency and to document the current payment status of the project.**
 >
-> **Client / Agency:** Ngu Agency  Nguagency.com
+> **Client / Agency:** Ngu Agency  https://Nguagency.com
 > 
 > **Telegram:** @nguagancy  
 > **Project Domain:** https://photopol.us/
